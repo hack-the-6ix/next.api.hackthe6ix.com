@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "zenstack.zenstack",
+    "dbaeumer.vscode-eslint",
+    "rvest.vs-code-prettier-eslint"
+  ]
+}

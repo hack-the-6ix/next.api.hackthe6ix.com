@@ -1,0 +1,24 @@
+version: "3.8"
+name: ht6-server
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    ports:
+      - ${DATABASE_PORT}:5432
+  adminer:
+    image: adminer
+    restart: always
+    environment:
+      ADMINER_PLUGINS: "dump-zip dump-json"
+      ADMINER_DESIGN: flat
+    ports:
+      - 8080:8080
+  smtp:
+    image: mailhog/mailhog
+    restart: always
+    ports:
+      - 8025:8025
+      - ${SMTP_PORT}:1025

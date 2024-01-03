@@ -1,0 +1,98 @@
+datasource db {
+    provider = 'postgresql'
+    url = env("DATABASE_URL")
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+// Auth stuff
+enum UserType {
+    USER // Keep this as first so the preview shows this
+    ADMIN
+    SUPER_ADMIN
+}
+
+model User {
+    id String @id @default(cuid())
+    firstName String
+    lastName String
+    userType UserType @default(USER) @deny('update', auth().userType == USER)
+    basicAuth BasicAuth?
+    googleAuth GoogleAuth?
+
+    @@allow('read', auth().userType == ADMIN || this.userType == USER)
+    @@allow('all', auth() == this || auth().userType == SUPER_ADMIN)
+    @@allow('create', true)
+}
+
+abstract model IAuth {
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId String @unique
+    email String @email @unique
+
+    @@allow('read', auth().userType == ADMIN)
+    @@allow('all', auth() == user || auth().userType == SUPER_ADMIN)
+}
+
+model BasicAuth extends IAuth {
+    password String @password @omit @length(8)
+    verified Boolean @default(false)
+}
+
+model GoogleAuth extends IAuth {
+    reference String @unique
+}
+
+// Forms stuff
+model Form {
+  id String @id @default(cuid())
+  title String
+  description String?
+  live Boolean @default(false)
+  startAt DateTime
+  endAt DateTime
+
+  questions Question[]
+
+  @@allow('read', live)
+  @@allow('all', auth().userType == SUPER_ADMIN || auth().userType == ADMIN)
+}
+
+model Question {
+  id String @id @default(cuid())
+  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formId String
+  label String
+  description String?
+  required Boolean
+
+  text TextQuestion?
+  number NumberQuestion?
+
+  @@allow('read', form.live)
+  @@allow('all', auth().userType == SUPER_ADMIN || auth().userType == ADMIN)
+}
+
+abstract model IQuestionType {
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId String @unique
+
+  @@allow('read', question.form.live)
+  @@allow('all', auth().userType == SUPER_ADMIN || auth().userType == ADMIN)
+}
+
+model TextQuestion extends IQuestionType {
+  defaultValue String?
+  minLength Int?
+  maxLength Int?
+  regex String?
+}
+
+model NumberQuestion extends IQuestionType {
+  defaultValue Int?
+  minValue Int?
+  maxValue Int?
+  precision Int? @default(0)
+}
