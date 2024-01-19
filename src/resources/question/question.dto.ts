@@ -1,4 +1,6 @@
 import {
+  BooleanQuestionCreateSchema,
+  BooleanQuestionUpdateSchema,
   QuestionCreateSchema,
   QuestionUpdateSchema,
   TextQuestionCreateSchema,
@@ -13,6 +15,9 @@ export class CreateQuestionDto extends createZodDto(
       TextQuestionCreateSchema.extend({ type: z.literal('text') }).omit({
         questionId: true,
       }),
+      BooleanQuestionCreateSchema.extend({ type: z.literal('boolean') }).omit({
+        questionId: true,
+      }),
     ]),
   }).omit({ formId: true, id: true }),
 ) {}
@@ -21,6 +26,9 @@ export class UpdateQuestionDto extends createZodDto(
   QuestionUpdateSchema.extend({
     data: z.discriminatedUnion('type', [
       TextQuestionUpdateSchema.extend({ type: z.literal('text') }).omit({
+        questionId: true,
+      }),
+      BooleanQuestionUpdateSchema.extend({ type: z.literal('boolean') }).omit({
         questionId: true,
       }),
     ]),
