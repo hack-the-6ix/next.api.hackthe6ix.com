@@ -9,11 +9,13 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
+  app.enableCors({ origin: '*' });
 
   const builder = new DocumentBuilder()
     .setDescription(process.env.npm_package_description!)
+    .setBasePath(configService.getOrThrow('API_HOST'))
     .setVersion(process.env.npm_package_version!)
-    .setTitle(process.env.npm_package_title!)
+    .setTitle(process.env.npm_package_name!)
     .addBearerAuth();
 
   const tags = (process.env.npm_package_keywords as unknown as string[]) ?? [];

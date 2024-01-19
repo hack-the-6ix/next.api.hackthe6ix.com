@@ -54,17 +54,20 @@ export const Paginated = <T extends Constructor>(
     ApiExtraModels(PaginatedResult<T>, model),
     ApiOkResponse({
       schema: {
-        allOf: [
-          { $ref: getSchemaPath(PaginatedResult<T>) },
-          {
-            properties: {
-              items: {
-                type: 'array',
-                items: { $ref: getSchemaPath(model) },
+        type: 'array',
+        items: {
+          allOf: [
+            { $ref: getSchemaPath(PaginatedResult<T>) },
+            {
+              properties: {
+                items: {
+                  type: 'array',
+                  items: { $ref: getSchemaPath(model) },
+                },
               },
             },
-          },
-        ],
+          ],
+        },
       },
     }),
   );
