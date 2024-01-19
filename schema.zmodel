@@ -70,6 +70,7 @@ model Question {
 
   text TextQuestion?
   number NumberQuestion?
+  boolean BooleanQuestion?
 
   @@allow('read', form.live)
   @@allow('all', auth().userType == SUPER_ADMIN || auth().userType == ADMIN)
@@ -95,4 +96,8 @@ model NumberQuestion extends IQuestionType {
   minValue Int?
   maxValue Int?
   precision Int? @default(0)
+}
+
+model BooleanQuestion extends IQuestionType {
+  defaultValue Boolean?
 }

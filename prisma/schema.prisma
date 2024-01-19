@@ -78,6 +78,7 @@ model Question {
     required Boolean
     text TextQuestion?
     number NumberQuestion?
+    boolean BooleanQuestion?
 }
 
 /// @@allow('read', question.form.live)
@@ -100,4 +101,12 @@ model NumberQuestion {
     minValue Int?
     maxValue Int?
     precision Int? @default(0)
+}
+
+/// @@allow('read', question.form.live)
+/// @@allow('all', auth().userType == SUPER_ADMIN || auth().userType == ADMIN)
+model BooleanQuestion {
+    question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+    questionId String @unique()
+    defaultValue Boolean?
 }
