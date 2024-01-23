@@ -12,7 +12,7 @@ export class AuthService {
     private jwt: JwtService,
   ) {}
 
-  getToken(userId: string) {
+  getAuthToken(userId: string) {
     return this.jwt.signAsync(
       {
         owo: 'uwu',
@@ -23,6 +23,22 @@ export class AuthService {
         expiresIn: '1d',
       },
     );
+  }
+
+  getRedirectToken(redirectUrl: string) {
+    return this.jwt.signAsync(
+      { redirectUrl },
+      {
+        audience: ['redirect'],
+        expiresIn: '5m',
+      },
+    );
+  }
+
+  verifyRedirectToken(token: string) {
+    return this.jwt.verifyAsync<{ redirectUrl: string }>(token, {
+      audience: ['redirect'],
+    });
   }
 
   async registerUser(payload: RegisterUserDto) {

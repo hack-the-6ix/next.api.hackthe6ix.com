@@ -9,6 +9,7 @@ export class NodemailerService {
 
   constructor(private configService: ConfigService) {
     this.transport = createTransport({
+      secure: configService.get('NODE_ENV', '') !== 'development',
       host: configService.getOrThrow('SMTP_HOST'),
       port: configService.getOrThrow('SMTP_PORT'),
       auth: {
