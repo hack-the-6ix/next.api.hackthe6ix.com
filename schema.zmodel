@@ -1,48 +1,49 @@
 datasource db {
-    provider = 'postgresql'
-    url = env("DATABASE_URL")
+  provider = 'postgresql'
+  url = env("DATABASE_URL")
 }
 
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 // Auth stuff
 enum UserType {
-    USER // Keep this as first so the preview shows this
-    ADMIN
-    SUPER_ADMIN
+  USER // Keep this as first so the preview shows this
+  ADMIN
+  SUPER_ADMIN
 }
 
 model User {
-    id String @id @default(cuid())
-    firstName String
-    lastName String
-    userType UserType @default(USER) @deny('update', auth().userType == USER)
-    basicAuth BasicAuth?
-    googleAuth GoogleAuth?
+  id String @id @default(cuid())
+  firstName String
+  lastName String
+  userType UserType @default(USER) @deny('update', auth().userType == USER)
+  basicAuth BasicAuth?
+  googleAuth GoogleAuth?
+  responses Response[]
 
-    @@allow('read', auth().userType == ADMIN || this.userType == USER)
-    @@allow('all', auth() == this || auth().userType == SUPER_ADMIN)
-    @@allow('create', true)
+  @@allow('read', auth().userType == ADMIN || this.userType == USER)
+  @@allow('all', auth() == this || auth().userType == SUPER_ADMIN)
+  @@allow('create', true)
 }
 
 abstract model IAuth {
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-    userId String @unique
-    email String @email @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+  email String @email @unique
 
-    @@allow('read', auth().userType == ADMIN)
-    @@allow('all', auth() == user || auth().userType == SUPER_ADMIN)
+  @@allow('read', auth().userType == ADMIN)
+  @@allow('all', auth() == user || auth().userType == SUPER_ADMIN)
 }
 
 model BasicAuth extends IAuth {
-    password String @password @omit @length(8)
-    verified Boolean @default(false)
+  password String @password @omit @length(8)
+  verified Boolean @default(false)
 }
 
 model GoogleAuth extends IAuth {
-    reference String @unique
+  reference String @unique
 }
 
 // Forms stuff
@@ -54,6 +55,7 @@ model Form {
   startAt DateTime
   endAt DateTime
 
+  responses Response[]
   questions Question[]
 
   @@allow('read', live)
@@ -67,6 +69,8 @@ model Question {
   label String
   description String?
   required Boolean
+
+  answers Answer[]
 
   text TextQuestion?
   number NumberQuestion?
@@ -100,4 +104,55 @@ model NumberQuestion extends IQuestionType {
 
 model BooleanQuestion extends IQuestionType {
   defaultValue Boolean?
+}
+
+// Responses stuff
+model Response {
+  id String @id @default(cuid())
+  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formId String
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdById String
+  answers Answer[]
+
+  @@allow('all', auth().userType == SUPER_ADMIN)
+  @@allow('read', auth() == createdBy || auth().userType == ADMIN)
+  @@allow('update', auth() == createdBy && form.live)
+  @@allow('create', form.live)
+}
+
+model Answer {
+  response Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  responseId String
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId String
+
+  text TextAnswer?
+  number NumberAnswer?
+
+  @@id([responseId, questionId])
+  @@allow('all', auth().userType == SUPER_ADMIN)
+  @@allow('create,update', auth() == response.createdBy && response.form.live)
+  @@allow('read', auth() == response.createdBy || auth().userType == ADMIN)
+}
+
+abstract model IAnswerType {
+  answer Answer @relation(fields: [responseId, questionId], references: [responseId, questionId], onDelete: Cascade)
+  responseId String
+  questionId String
+  updatedAt DateTime @updatedAt
+  @@id([responseId, questionId])
+  @@allow('all', auth().userType == SUPER_ADMIN)
+  @@allow('create,update', auth() == answer.response.createdBy && answer.response.form.live)
+  @@allow('read', auth() == answer.response.createdBy || auth().userType == ADMIN)
+}
+
+model TextAnswer extends IAnswerType {
+  value String
+  @@unique([questionId, responseId])
+}
+
+model NumberAnswer extends IAnswerType {
+  value Int
+  @@unique([questionId, responseId])
 }

@@ -29,6 +29,7 @@ model User {
     userType UserType @default(USER)
     basicAuth BasicAuth?
     googleAuth GoogleAuth?
+    responses Response[]
 }
 
 /// @@allow('read', auth().userType == ADMIN)
@@ -64,6 +65,7 @@ model Form {
     live Boolean @default(false)
     startAt DateTime
     endAt DateTime
+    responses Response[]
     questions Question[]
 }
 
@@ -76,6 +78,7 @@ model Question {
     label String
     description String?
     required Boolean
+    answers Answer[]
     text TextQuestion?
     number NumberQuestion?
     boolean BooleanQuestion?
@@ -109,4 +112,59 @@ model BooleanQuestion {
     question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
     questionId String @unique()
     defaultValue Boolean?
+}
+
+/// @@allow('all', auth().userType == SUPER_ADMIN)
+/// @@allow('read', auth() == createdBy || auth().userType == ADMIN)
+/// @@allow('update', auth() == createdBy && form.live)
+/// @@allow('create', form.live)
+model Response {
+    id String @id() @default(cuid())
+    form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+    formId String
+    createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+    createdById String
+    answers Answer[]
+}
+
+/// @@allow('all', auth().userType == SUPER_ADMIN)
+/// @@allow('create,update', auth() == response.createdBy && response.form.live)
+/// @@allow('read', auth() == response.createdBy || auth().userType == ADMIN)
+model Answer {
+    response Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+    responseId String
+    question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+    questionId String
+    text TextAnswer?
+    number NumberAnswer?
+
+    @@id([responseId, questionId])
+}
+
+/// @@allow('all', auth().userType == SUPER_ADMIN)
+/// @@allow('create,update', auth() == answer.response.createdBy && answer.response.form.live)
+/// @@allow('read', auth() == answer.response.createdBy || auth().userType == ADMIN)
+model TextAnswer {
+    answer Answer @relation(fields: [responseId, questionId], references: [responseId, questionId], onDelete: Cascade)
+    responseId String
+    questionId String
+    updatedAt DateTime @updatedAt()
+    value String
+
+    @@id([responseId, questionId])
+    @@unique([questionId, responseId])
+}
+
+/// @@allow('all', auth().userType == SUPER_ADMIN)
+/// @@allow('create,update', auth() == answer.response.createdBy && answer.response.form.live)
+/// @@allow('read', auth() == answer.response.createdBy || auth().userType == ADMIN)
+model NumberAnswer {
+    answer Answer @relation(fields: [responseId, questionId], references: [responseId, questionId], onDelete: Cascade)
+    responseId String
+    questionId String
+    updatedAt DateTime @updatedAt()
+    value Int
+
+    @@id([responseId, questionId])
+    @@unique([questionId, responseId])
 }

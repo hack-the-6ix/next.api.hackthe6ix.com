@@ -10,6 +10,7 @@ import { NodemailerService } from './services/nodemailer/nodemailer.service';
 import { UserModule } from './resources/user/user.module';
 import { FormModule } from './resources/form/form.module';
 import { QuestionModule } from './resources/question/question.module';
+import { ResponseModule } from './resources/response/response.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { QuestionModule } from './resources/question/question.module';
     UserModule,
     FormModule,
     QuestionModule,
+    ResponseModule,
   ],
   controllers: [AppController],
   providers: [
