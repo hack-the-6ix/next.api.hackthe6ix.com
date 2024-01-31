@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 name: ht6-server
 services:
   db:
@@ -12,12 +12,12 @@ services:
     image: adminer
     restart: always
     environment:
-      ADMINER_PLUGINS: "dump-zip dump-json"
+      ADMINER_PLUGINS: 'dump-zip dump-json'
       ADMINER_DESIGN: flat
     ports:
       - 8080:8080
   smtp:
-    image: mailhog/mailhog
+    image: jcalonso/mailhog
     restart: always
     ports:
       - 8025:8025
