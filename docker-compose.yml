@@ -6,8 +6,11 @@ services:
     restart: always
     environment:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
     ports:
       - ${DATABASE_PORT}:5432
+    volumes:
+      - ./db/scripts:/docker-entrypoint-initdb.d
   adminer:
     image: adminer
     restart: always
