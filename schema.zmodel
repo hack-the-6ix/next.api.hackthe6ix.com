@@ -1,48 +1,52 @@
 datasource db {
-    provider = 'postgresql'
-    url = env("DATABASE_URL")
+  provider = 'postgresql'
+  url = env("DATABASE_URL")
 }
 
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
+}
+
+plugin zod {
+  provider = "@core/zod"
 }
 
 // Auth stuff
 enum UserType {
-    USER // Keep this as first so the preview shows this
-    ADMIN
-    SUPER_ADMIN
+  USER // Keep this as first so the preview shows this
+  ADMIN
+  SUPER_ADMIN
 }
 
 model User {
-    id String @id @default(cuid())
-    firstName String
-    lastName String
-    userType UserType @default(USER) @deny('update', auth().userType == USER)
-    basicAuth BasicAuth?
-    googleAuth GoogleAuth?
+  id String @id @default(cuid())
+  firstName String
+  lastName String
+  userType UserType @default(USER) @deny('update', auth().userType == USER)
+  basicAuth BasicAuth?
+  googleAuth GoogleAuth?
 
-    @@allow('read', auth().userType == ADMIN || this.userType == USER)
-    @@allow('all', auth() == this || auth().userType == SUPER_ADMIN)
-    @@allow('create', true)
+  @@allow('read', auth().userType == ADMIN || this.userType == USER)
+  @@allow('all', auth() == this || auth().userType == SUPER_ADMIN)
+  @@allow('create', true)
 }
 
 abstract model IAuth {
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-    userId String @unique
-    email String @email @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+  email String @email @unique
 
-    @@allow('read', auth().userType == ADMIN)
-    @@allow('all', auth() == user || auth().userType == SUPER_ADMIN)
+  @@allow('read', auth().userType == ADMIN)
+  @@allow('all', auth() == user || auth().userType == SUPER_ADMIN)
 }
 
 model BasicAuth extends IAuth {
-    password String @password @omit @length(8)
-    verified Boolean @default(false)
+  password String @password @omit @length(8)
+  verified Boolean @default(false)
 }
 
 model GoogleAuth extends IAuth {
-    reference String @unique
+  reference String @unique
 }
 
 // Forms stuff

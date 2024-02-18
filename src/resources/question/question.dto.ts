@@ -9,6 +9,8 @@ import {
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'nestjs-zod/z';
 
+export const questionTypes = ['text', 'number'] as const;
+
 export class CreateQuestionDto extends createZodDto(
   QuestionCreateSchema.extend({
     data: z.discriminatedUnion('type', [

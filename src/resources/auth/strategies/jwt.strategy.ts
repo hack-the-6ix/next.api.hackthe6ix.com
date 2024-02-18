@@ -16,6 +16,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     configService: ConfigService,
   ) {
     const args: StrategyOptions = {
+      ignoreExpiration: configService.getOrThrow('NODE_ENV') === 'development',
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       secretOrKey: configService.getOrThrow('JWT_SECRET'),
       issuer: configService.getOrThrow('JWT_ISSUER'),

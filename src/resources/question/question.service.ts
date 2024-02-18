@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import * as R from 'ramda';
 
 import { PrismaService } from '@services/prisma/prisma.service';
-import { CreateQuestionDto, UpdateQuestionDto } from './question.dto';
+import {
+  CreateQuestionDto,
+  UpdateQuestionDto,
+  questionTypes,
+} from './question.dto';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -11,14 +15,11 @@ export class QuestionService {
 
   private async getType(formId: string, questionId: string) {
     const result = await this.prisma.question.findUnique({
-      select: {
-        id: true,
-        text: {
-          select: {
-            questionId: true,
-          },
-        },
-      },
+      select: R.reduce(
+        (acc, type) => R.assoc(type, { select: { questionId: true } }, acc),
+        { id: true },
+        questionTypes,
+      ),
       where: {
         id: questionId,
         formId,
@@ -26,10 +27,10 @@ export class QuestionService {
     });
 
     return R.cond(
-      R.map((type) => [R.pipe(R.prop(type), R.isNotNil), R.always(type)], [
-        'text',
-        'number',
-      ] as const),
+      R.map(
+        (type) => [R.pipe(R.prop(type), R.isNotNil), R.always(type)],
+        questionTypes,
+      ),
     )(result);
   }
 
