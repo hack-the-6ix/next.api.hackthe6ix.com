@@ -1,4 +1,3 @@
-import { Form } from '@prisma/client';
 import {
   FormCreateSchema,
   FormUpdateSchema,
@@ -6,14 +5,16 @@ import {
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'nestjs-zod/z';
 
-export class SerializedForm implements Form {
-  id: string;
-  title: string;
-  description: string | null;
-  live: boolean;
-  startAt: Date;
-  endAt: Date;
-}
+export class SerializedForm extends createZodDto(
+  z.object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string().optional(),
+    live: z.boolean(),
+    startAt: z.coerce.date(),
+    endAt: z.coerce.date(),
+  }),
+) {}
 
 export class CreateFormDto extends createZodDto(
   FormCreateSchema.omit({ id: true, startAt: true, endAt: true }).merge(

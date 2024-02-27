@@ -51,10 +51,18 @@ export class AuthController {
     @Query('redirect') redirect?: string,
   ) {
     try {
-      if (!redirect) throw new Error();
-      const { redirectUrl } =
-        await this.authService.verifyRedirectToken(redirect);
       const token = await this.authService.getAuthToken(user.id);
+      if (!redirect) {
+        if (this.configService.getOrThrow('NODE_ENV') === 'development') {
+          res.json(token);
+          return;
+        }
+        throw new Error();
+      }
+
+      const { redirectUrl } = await this.authService.verifyRedirectToken(
+        redirect ?? '',
+      );
 
       // TODO: Use a 301 when we are able to add proper headers at things
       res.setHeader('X-HT6-Redirect', redirectUrl);

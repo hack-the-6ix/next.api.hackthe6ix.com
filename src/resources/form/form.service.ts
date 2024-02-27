@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Form } from '@prisma/client';
 import { PrismaService } from '@services/prisma/prisma.service';
-import { CreateFormDto, UpdateFormDto } from './form.dto';
+import { CreateFormDto, SerializedForm, UpdateFormDto } from './form.dto';
 
 @Injectable()
 export class FormService {
@@ -34,7 +34,7 @@ export class FormService {
     });
   }
 
-  serialize(form: Form) {
-    return form;
+  serialize(form: Form): SerializedForm {
+    return SerializedForm.schema.parse(form);
   }
 }

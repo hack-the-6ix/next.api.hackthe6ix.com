@@ -4,40 +4,55 @@ import * as R from 'ramda';
 import { PrismaService } from '@services/prisma/prisma.service';
 import {
   CreateQuestionDto,
+  SerializedQuestion,
   UpdateQuestionDto,
-  questionTypes,
+  questionInclude,
 } from './question.dto';
 import { Prisma } from '@prisma/client';
+
+type QuestionType = Prisma.QuestionGetPayload<{
+  include: typeof questionInclude;
+}>;
+
+const getTypeQuery = {
+  select: {
+    boolean: { select: { questionId: true } },
+    text: { select: { questionId: true } },
+  },
+};
 
 @Injectable()
 export class QuestionService {
   constructor(private prisma: PrismaService) {}
 
-  private async getType(formId: string, questionId: string) {
-    const result = await this.prisma.question.findUnique({
-      select: R.reduce(
-        (acc, type) => R.assoc(type, { select: { questionId: true } }, acc),
-        { id: true },
-        questionTypes,
-      ),
-      where: {
-        id: questionId,
-        formId,
-      },
-    });
-
+  private getType(question: Prisma.QuestionGetPayload<typeof getTypeQuery>) {
     return R.cond(
       R.map(
         (type) => [R.pipe(R.prop(type), R.isNotNil), R.always(type)],
-        questionTypes,
+        R.keys(questionInclude),
       ),
-    )(result);
+    )(question);
   }
 
-  list(currentUser: TypedUser, formId: string) {
-    return this.prisma.withContext(currentUser).question.findMany({
-      where: { formId },
+  private async fetchType(formId: string, questionId: string) {
+    const result = await this.prisma.question.findUniqueOrThrow({
+      ...getTypeQuery,
+      where: { id: questionId, formId },
     });
+
+    return this.getType(result);
+  }
+
+  list(currentUser: TypedUser, formId: string, take: number, skip: number) {
+    const prisma = this.prisma.withContext(currentUser);
+    const where = Prisma.validator<Prisma.QuestionWhereInput>()({
+      formId,
+    });
+
+    return Promise.all([
+      prisma.question.findMany({ include: questionInclude, where, take, skip }),
+      prisma.question.count({ where }),
+    ]);
   }
 
   create(
@@ -46,6 +61,7 @@ export class QuestionService {
     { data, ...fields }: CreateQuestionDto,
   ) {
     return this.prisma.withContext(currentUser).question.create({
+      include: questionInclude,
       data: {
         formId,
         ...fields,
@@ -84,7 +100,7 @@ export class QuestionService {
       },
     });
 
-    const oldType = await this.getType(formId, questionId);
+    const oldType = await this.fetchType(formId, questionId);
     if (data.type !== oldType) {
       payload = Prisma.validator<Prisma.QuestionUpdateArgs['data']>()({
         ...payload,
@@ -93,8 +109,20 @@ export class QuestionService {
     }
 
     return this.prisma.withContext(currentUser).question.update({
+      include: questionInclude,
       where: { id: questionId },
       data: payload,
+    });
+  }
+
+  serialize(question: QuestionType): SerializedQuestion {
+    const type = this.getType(question);
+    return SerializedQuestion.schema.parse({
+      ...R.omit([type], question),
+      data: {
+        ...question[type],
+        type,
+      },
     });
   }
 }

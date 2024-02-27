@@ -1,15 +1,35 @@
+import { Prisma } from '@prisma/client';
 import {
   BooleanQuestionCreateSchema,
+  BooleanQuestionScalarSchema,
   BooleanQuestionUpdateSchema,
   QuestionCreateSchema,
+  QuestionScalarSchema,
   QuestionUpdateSchema,
   TextQuestionCreateSchema,
+  TextQuestionScalarSchema,
   TextQuestionUpdateSchema,
 } from '@zenstackhq/runtime/zod/models';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'nestjs-zod/z';
 
-export const questionTypes = ['text', 'number'] as const;
+export const questionInclude = Prisma.validator<Prisma.QuestionInclude>()({
+  boolean: true,
+  text: true,
+});
+
+export class SerializedQuestion extends createZodDto(
+  QuestionScalarSchema.extend({
+    data: z.discriminatedUnion('type', [
+      TextQuestionScalarSchema.extend({ type: z.literal('text') }).omit({
+        questionId: true,
+      }),
+      BooleanQuestionScalarSchema.extend({ type: z.literal('boolean') }).omit({
+        questionId: true,
+      }),
+    ]),
+  }),
+) {}
 
 export class CreateQuestionDto extends createZodDto(
   QuestionCreateSchema.extend({
