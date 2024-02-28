@@ -37,4 +37,13 @@ export class FormService {
   serialize(form: Form): SerializedForm {
     return SerializedForm.schema.parse(form);
   }
+
+
+  //delete?
+  delete(currentUser: TypedUser, id: string) {
+    return this.prisma.withContext(currentUser).form.delete({
+      where: { id },
+    });
+}
+
 }
