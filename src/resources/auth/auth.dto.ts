@@ -4,6 +4,7 @@ import {
 } from '@zenstackhq/runtime/zod/models';
 import { passwordStrength } from 'check-password-strength';
 import { createZodDto } from 'nestjs-zod';
+import { z } from 'nestjs-zod/z';
 import * as R from 'ramda';
 
 export class RegisterUserDto extends createZodDto(
@@ -32,4 +33,10 @@ export class RegisterUserDto extends createZodDto(
 
 export class LoginUserDto extends createZodDto(
   BasicAuthCreateSchema.pick({ email: true, password: true }),
+) {}
+
+export class VerifyUserDto extends createZodDto(
+  z.object({
+    token: z.string(),
+  }),
 ) {}

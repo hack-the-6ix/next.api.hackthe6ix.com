@@ -13,7 +13,7 @@ import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBody, ApiQuery } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginUserDto, RegisterUserDto } from './auth.dto';
+import { LoginUserDto, RegisterUserDto, VerifyUserDto } from './auth.dto';
 import { CurrentUser } from 'src/decorators/CurrentUser.decorators';
 import { ConfigService } from '@nestjs/config';
 
@@ -69,6 +69,15 @@ export class AuthController {
       res.json(token);
     } catch (err) {
       throw new ForbiddenException('Bad Redirect');
+    }
+  }
+
+  @Post('verify')
+  async verifyUser(@Body() data: VerifyUserDto) {
+    try {
+      return this.authService.verifyUser(data);
+    } catch (err) {
+      throw new ForbiddenException('Bad Token');
     }
   }
 }

@@ -1,12 +1,14 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { RegisterUserDto } from './auth.dto';
+import { RegisterUserDto, VerifyUserDto } from './auth.dto';
 import { PrismaService } from '@services/prisma/prisma.service';
 import { NodemailerService } from '@services/nodemailer/nodemailer.service';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
+    private config: ConfigService,
     private mailer: NodemailerService,
     private prisma: PrismaService,
     private jwt: JwtService,
@@ -41,6 +43,21 @@ export class AuthService {
     });
   }
 
+  async verifyUser(payload: VerifyUserDto) {
+    const data = await this.jwt.verifyAsync(payload.token, {
+      audience: ['verify'],
+    });
+    await this.prisma.withContext({ id: data.sub }).basicAuth.update({
+      where: {
+        userId: data.sub,
+      },
+      data: {
+        verified: true,
+      },
+    });
+    return true;
+  }
+
   async registerUser(payload: RegisterUserDto) {
     const user = await this.prisma.withContext().user.create({
       data: {
@@ -60,7 +77,23 @@ export class AuthService {
     });
 
     try {
-      await this.mailer.send(payload.email, 'Verify email', 'owo');
+      const verifyToken = await this.jwt.signAsync(
+        { owo: 'uwu' },
+        {
+          audience: ['verify'],
+          subject: user.id,
+          expiresIn: '1h',
+        },
+      );
+
+      const verifyUrl = `${this.config.getOrThrow(
+        'AUTH_HOST',
+      )}/verify?token=${verifyToken}`;
+      await this.mailer.send(
+        payload.email,
+        'Verify email',
+        `To verify, go to ${verifyUrl}`,
+      );
     } catch (err) {
       console.error('Error sending email', payload.email, err);
 
