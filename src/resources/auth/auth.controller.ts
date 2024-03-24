@@ -13,7 +13,13 @@ import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBody, ApiQuery } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginUserDto, RegisterUserDto, VerifyUserDto } from './auth.dto';
+import {
+  LoginUserDto,
+  RegisterUserDto,
+  VerifyUserDto,
+  ResetPasswordDto,
+  VerifiedResetPasswordDto,
+} from './auth.dto';
 import { CurrentUser } from 'src/decorators/CurrentUser.decorators';
 import { ConfigService } from '@nestjs/config';
 
@@ -78,6 +84,21 @@ export class AuthController {
       return this.authService.verifyUser(data);
     } catch (err) {
       throw new ForbiddenException('Bad Token');
+    }
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() data: ResetPasswordDto) {
+    return this.authService.resetPassword(data);
+  }
+
+  @Post('verified-reset-password')
+  async verifiedResetPassword(@Body() data: VerifiedResetPasswordDto) {
+    try {
+      await this.authService.verifiedResetPassword(data);
+      return { message: 'Password reset successful' };
+    } catch (err) {
+      throw new ForbiddenException('Password reset failed');
     }
   }
 }

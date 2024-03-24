@@ -40,3 +40,16 @@ export class VerifyUserDto extends createZodDto(
     token: z.string(),
   }),
 ) {}
+
+export class ResetPasswordDto extends createZodDto(
+  z.object({
+    email: z.string().email(),
+  }),
+) {}
+
+export class VerifiedResetPasswordDto extends createZodDto(
+  z.object({
+    token: z.string(),
+    newPassword: z.string(),
+  }),
+) {}

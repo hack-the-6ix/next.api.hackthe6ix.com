@@ -1,5 +1,14 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { RegisterUserDto, VerifyUserDto } from './auth.dto';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  RegisterUserDto,
+  VerifyUserDto,
+  ResetPasswordDto,
+  VerifiedResetPasswordDto,
+} from './auth.dto';
 import { PrismaService } from '@services/prisma/prisma.service';
 import { NodemailerService } from '@services/nodemailer/nodemailer.service';
 import { JwtService } from '@nestjs/jwt';
@@ -91,7 +100,7 @@ export class AuthService {
       )}/verify?token=${verifyToken}`;
       await this.mailer.send(
         payload.email,
-        'Verify email',
+        'HT6 Verify email',
         `To verify, go to ${verifyUrl}`,
       );
     } catch (err) {
@@ -106,5 +115,65 @@ export class AuthService {
     }
 
     return true;
+  }
+
+  async verifiedResetPassword(payload: VerifiedResetPasswordDto) {
+    const data = await this.jwt.verifyAsync(payload.token, {
+      audience: ['resetPassword'],
+    });
+
+    // Update the password for the user
+    await this.prisma.withContext({ id: data.sub }).basicAuth.update({
+      where: {
+        userId: data.sub,
+      },
+      data: {
+        password: payload.newPassword,
+      },
+    });
+
+    return true;
+  }
+
+  async resetPassword(payload: ResetPasswordDto) {
+    const { email } = payload;
+
+    // gets user data based on email
+    const user = await this.prisma.basicAuth.findUnique({
+      where: {
+        email,
+      },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    try {
+      // get a token for permission to reset password
+      const passwordToken = await this.jwt.signAsync(
+        { owo: 'uwu' },
+        {
+          audience: ['resetPassword'],
+          subject: user.userId,
+          expiresIn: '15m',
+        },
+      );
+
+      // makes a url with the token and sends it to the given email
+      const passwordUrl = `${this.config.getOrThrow(
+        'AUTH_HOST',
+      )}/reset-password?token=${passwordToken}`;
+
+      await this.mailer.send(
+        email,
+        'HT6 Reset Password',
+        `A request has been made to reset your password.\nIf you made this request, please go to the provided link: ${passwordUrl}`,
+      );
+
+      return true;
+    } catch (error) {
+      console.error('Error changing password', error);
+      throw new InternalServerErrorException();
+    }
   }
 }
