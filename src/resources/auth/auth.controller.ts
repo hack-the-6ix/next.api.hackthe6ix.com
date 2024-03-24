@@ -19,6 +19,7 @@ import {
   VerifyUserDto,
   ResetPasswordDto,
   VerifiedResetPasswordDto,
+  ResendVerifyDto,
 } from './auth.dto';
 import { CurrentUser } from 'src/decorators/CurrentUser.decorators';
 import { ConfigService } from '@nestjs/config';
@@ -85,6 +86,11 @@ export class AuthController {
     } catch (err) {
       throw new ForbiddenException('Bad Token');
     }
+  }
+
+  @Post('resend-verify')
+  async resendVerify(@Body() data: ResendVerifyDto) {
+    return this.authService.resendVerify(data);
   }
 
   @Post('reset-password')

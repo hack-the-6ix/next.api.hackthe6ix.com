@@ -41,6 +41,12 @@ export class VerifyUserDto extends createZodDto(
   }),
 ) {}
 
+export class ResendVerifyDto extends createZodDto(
+  z.object({
+    email: z.string().email(),
+  }),
+) {}
+
 export class ResetPasswordDto extends createZodDto(
   z.object({
     email: z.string().email(),

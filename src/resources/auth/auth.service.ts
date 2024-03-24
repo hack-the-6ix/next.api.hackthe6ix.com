@@ -8,6 +8,7 @@ import {
   VerifyUserDto,
   ResetPasswordDto,
   VerifiedResetPasswordDto,
+  ResendVerifyDto,
 } from './auth.dto';
 import { PrismaService } from '@services/prisma/prisma.service';
 import { NodemailerService } from '@services/nodemailer/nodemailer.service';
@@ -115,6 +116,48 @@ export class AuthService {
     }
 
     return true;
+  }
+
+  async resendVerify(payload: ResendVerifyDto) {
+    const { email } = payload;
+
+    // gets user data based on email
+    const user = await this.prisma.basicAuth.findUnique({
+      where: {
+        email,
+      },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    try {
+      // get the registration verify token
+      const verifyToken = await this.jwt.signAsync(
+        { owo: 'uwu' },
+        {
+          audience: ['verify'],
+          subject: user.userId,
+          expiresIn: '1h',
+        },
+      );
+
+      // makes a url with the token and sends it to the given email
+      const verifyUrl = `${this.config.getOrThrow(
+        'AUTH_HOST',
+      )}/verify?token=${verifyToken}`;
+
+      await this.mailer.send(
+        email,
+        'HT6 Verify email',
+        `To verify, go to ${verifyUrl}`,
+      );
+
+      return true;
+    } catch (error) {
+      console.error('Error sending email', payload.email);
+      throw new InternalServerErrorException();
+    }
   }
 
   async verifiedResetPassword(payload: VerifiedResetPasswordDto) {
