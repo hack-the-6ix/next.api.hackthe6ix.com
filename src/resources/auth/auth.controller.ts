@@ -5,7 +5,6 @@ import {
   ForbiddenException,
   Get,
   Post,
-  Put,
   Query,
   Res,
   UseGuards,
@@ -105,7 +104,7 @@ export class AuthController {
     return this.authService.resetPassword(data);
   }
 
-  @Put('verified-reset-password')
+  @Post('verified-reset-password')
   async verifiedResetPassword(@Body() data: VerifiedResetPasswordDto) {
     try {
       await this.authService.verifiedResetPassword(data);
