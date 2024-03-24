@@ -31,6 +31,12 @@ export class RegisterUserDto extends createZodDto(
     ),
 ) {}
 
+export class RegisterFailDto extends createZodDto(
+  z.object({
+    email: z.string().email(),
+  }),
+) {}
+
 export class LoginUserDto extends createZodDto(
   BasicAuthCreateSchema.pick({ email: true, password: true }),
 ) {}

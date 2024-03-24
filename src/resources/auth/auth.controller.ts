@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   Get,
   Post,
+  Put,
   Query,
   Res,
   UseGuards,
@@ -20,6 +21,7 @@ import {
   ResetPasswordDto,
   VerifiedResetPasswordDto,
   ResendVerifyDto,
+  RegisterFailDto,
 } from './auth.dto';
 import { CurrentUser } from 'src/decorators/CurrentUser.decorators';
 import { ConfigService } from '@nestjs/config';
@@ -46,6 +48,11 @@ export class AuthController {
   @Post('register')
   async register(@Body() body: RegisterUserDto) {
     return this.authService.registerUser(body);
+  }
+
+  @Post('register-fail')
+  async registerFail(@Body() data: RegisterFailDto) {
+    return this.authService.registerFail(data);
   }
 
   @Post('login')
@@ -98,7 +105,7 @@ export class AuthController {
     return this.authService.resetPassword(data);
   }
 
-  @Post('verified-reset-password')
+  @Put('verified-reset-password')
   async verifiedResetPassword(@Body() data: VerifiedResetPasswordDto) {
     try {
       await this.authService.verifiedResetPassword(data);

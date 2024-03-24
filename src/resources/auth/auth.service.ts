@@ -9,6 +9,7 @@ import {
   ResetPasswordDto,
   VerifiedResetPasswordDto,
   ResendVerifyDto,
+  RegisterFailDto,
 } from './auth.dto';
 import { PrismaService } from '@services/prisma/prisma.service';
 import { NodemailerService } from '@services/nodemailer/nodemailer.service';
@@ -76,17 +77,17 @@ export class AuthService {
       },
     });
 
-    await this.prisma.withContext(user).basicAuth.createMany({
-      data: [
-        {
-          password: payload.password,
-          email: payload.email,
-          userId: user.id,
-        },
-      ],
-    });
-
     try {
+      await this.prisma.withContext(user).basicAuth.createMany({
+        data: [
+          {
+            password: payload.password,
+            email: payload.email,
+            userId: user.id,
+          },
+        ],
+      });
+
       const verifyToken = await this.jwt.signAsync(
         { owo: 'uwu' },
         {
@@ -116,6 +117,44 @@ export class AuthService {
     }
 
     return true;
+  }
+
+  async registerFail(payload: RegisterFailDto) {
+    const { email } = payload;
+
+    // gets user data based on email
+    const user = await this.prisma.basicAuth.findUnique({
+      where: {
+        email,
+      },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    try {
+      // makes a url with the token and sends it to the given email
+      const resetPasswordUrl = `${this.config.getOrThrow(
+        'AUTH_HOST',
+      )}/forgot-password`;
+
+      await this.mailer.send(
+        email,
+        'HT6 Registration Failed: You Already Have an Account',
+        `You tried to register for an account with the same email, you already have an account. \nIf you forgot your password, please change it using ${resetPasswordUrl}`,
+      );
+
+      /* try {
+        await this.prisma.user.delete({ where: { id: user.userId } });
+      } catch (err) {
+        console.error('Failed to cleanup user', payload.email, err);
+      } */
+
+      return true;
+    } catch (error) {
+      console.error('Error sending email', payload.email);
+      throw new InternalServerErrorException();
+    }
   }
 
   async resendVerify(payload: ResendVerifyDto) {
