@@ -30,9 +30,9 @@ export class AuthService {
         owo: 'uwu',
       },
       {
-        audience: [`${aud}`],
+        audience: [aud],
         subject: userId,
-        expiresIn: `${time}`,
+        expiresIn: time,
       },
     );
   }
@@ -61,19 +61,15 @@ export class AuthService {
   ) {
     const verifyUrl = `${this.config.getOrThrow('AUTH_HOST')}/${path}`;
 
-    await this.mailer.send(email, `${subject}`, `${body} ${verifyUrl}`);
+    await this.mailer.send(email, subject, `${body} ${verifyUrl}`);
   }
 
   private async getUserByEmail(email: string) {
-    const user = await this.prisma.basicAuth.findUnique({
+    return await this.prisma.basicAuth.findUniqueOrThrow({
       where: {
         email,
       },
     });
-    if (!user) {
-      throw new NotFoundException('User not found.');
-    }
-    return user;
   }
 
   async verifyUser(payload: VerifyUserDto) {
