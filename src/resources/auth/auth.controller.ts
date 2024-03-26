@@ -13,7 +13,14 @@ import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBody, ApiQuery } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginUserDto, RegisterUserDto } from './auth.dto';
+import {
+  LoginUserDto,
+  RegisterUserDto,
+  VerifyUserDto,
+  ResetPasswordDto,
+  VerifiedResetPasswordDto,
+  ResendVerifyDto,
+} from './auth.dto';
 import { CurrentUser } from 'src/decorators/CurrentUser.decorators';
 import { ConfigService } from '@nestjs/config';
 
@@ -51,7 +58,7 @@ export class AuthController {
     @Query('redirect') redirect?: string,
   ) {
     try {
-      const token = await this.authService.getAuthToken(user.id);
+      const token = await this.authService.getToken('auth', user.id, '1d');
       if (!redirect) {
         if (this.configService.getOrThrow('NODE_ENV') === 'development') {
           res.json(token);
@@ -69,6 +76,35 @@ export class AuthController {
       res.json(token);
     } catch (err) {
       throw new ForbiddenException('Bad Redirect');
+    }
+  }
+
+  @Post('verify')
+  async verifyUser(@Body() data: VerifyUserDto) {
+    try {
+      return this.authService.verifyUser(data);
+    } catch (err) {
+      throw new ForbiddenException('Bad Token');
+    }
+  }
+
+  @Post('resend-verify')
+  async resendVerify(@Body() data: ResendVerifyDto) {
+    return this.authService.resendVerify(data);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() data: ResetPasswordDto) {
+    return this.authService.resetPassword(data);
+  }
+
+  @Post('reset-password/verify')
+  async verifiedResetPassword(@Body() data: VerifiedResetPasswordDto) {
+    try {
+      await this.authService.verifiedResetPassword(data);
+      return { message: 'Password reset successful' };
+    } catch (err) {
+      throw new ForbiddenException('Password reset failed');
     }
   }
 }
