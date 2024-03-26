@@ -20,7 +20,6 @@ import {
   ResetPasswordDto,
   VerifiedResetPasswordDto,
   ResendVerifyDto,
-  RegisterFailDto,
 } from './auth.dto';
 import { CurrentUser } from 'src/decorators/CurrentUser.decorators';
 import { ConfigService } from '@nestjs/config';
@@ -49,11 +48,6 @@ export class AuthController {
     return this.authService.registerUser(body);
   }
 
-  @Post('register-fail')
-  async registerFail(@Body() data: RegisterFailDto) {
-    return this.authService.registerFail(data);
-  }
-
   @Post('login')
   @ApiBody({ type: LoginUserDto })
   @ApiQuery({ name: 'redirect', type: 'string', required: false })
@@ -64,7 +58,7 @@ export class AuthController {
     @Query('redirect') redirect?: string,
   ) {
     try {
-      const token = await this.authService.getAuthToken(user.id);
+      const token = await this.authService.getToken('auth', user.id, '1d');
       if (!redirect) {
         if (this.configService.getOrThrow('NODE_ENV') === 'development') {
           res.json(token);
@@ -104,7 +98,7 @@ export class AuthController {
     return this.authService.resetPassword(data);
   }
 
-  @Post('verified-reset-password')
+  @Post('reset-password/verify')
   async verifiedResetPassword(@Body() data: VerifiedResetPasswordDto) {
     try {
       await this.authService.verifiedResetPassword(data);

@@ -9,7 +9,6 @@ import {
   ResetPasswordDto,
   VerifiedResetPasswordDto,
   ResendVerifyDto,
-  RegisterFailDto,
 } from './auth.dto';
 import { PrismaService } from '@services/prisma/prisma.service';
 import { NodemailerService } from '@services/nodemailer/nodemailer.service';
@@ -25,15 +24,15 @@ export class AuthService {
     private jwt: JwtService,
   ) {}
 
-  getAuthToken(userId: string) {
+  getToken(aud: string, userId: string, time: string) {
     return this.jwt.signAsync(
       {
         owo: 'uwu',
       },
       {
-        audience: ['auth'],
+        audience: [`${aud}`],
         subject: userId,
-        expiresIn: '1d',
+        expiresIn: `${time}`,
       },
     );
   }
@@ -52,6 +51,29 @@ export class AuthService {
     return this.jwt.verifyAsync<{ redirectUrl: string }>(token, {
       audience: ['redirect'],
     });
+  }
+
+  async sendLinkEmail(
+    email: string,
+    path: string,
+    subject: string,
+    body: string,
+  ) {
+    const verifyUrl = `${this.config.getOrThrow('AUTH_HOST')}/${path}`;
+
+    await this.mailer.send(email, `${subject}`, `${body} ${verifyUrl}`);
+  }
+
+  private async getUserByEmail(email: string) {
+    const user = await this.prisma.basicAuth.findUnique({
+      where: {
+        email,
+      },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+    return user;
   }
 
   async verifyUser(payload: VerifyUserDto) {
@@ -88,108 +110,53 @@ export class AuthService {
         ],
       });
 
-      const verifyToken = await this.jwt.signAsync(
-        { owo: 'uwu' },
-        {
-          audience: ['verify'],
-          subject: user.id,
-          expiresIn: '1h',
-        },
-      );
+      const verifyToken = await this.getToken('verify', user.id, '1h');
 
-      const verifyUrl = `${this.config.getOrThrow(
-        'AUTH_HOST',
-      )}/verify?token=${verifyToken}`;
-      await this.mailer.send(
+      this.sendLinkEmail(
         payload.email,
+        `verify?token=${verifyToken}`,
         'HT6 Verify email',
-        `To verify, go to ${verifyUrl}`,
+        `To verify, go to`,
       );
     } catch (err) {
-      console.error('Error sending email', payload.email, err);
+      try {
+        // makes a url with the token and sends it to the given email
+        this.sendLinkEmail(
+          payload.email,
+          `forgot-password`,
+          'HT6 Registration Failed: You Already Have an Account',
+          `You tried to register for an account with the same email, you already have an account. \nIf you forgot your password, please change it using`,
+        );
+      } catch (error) {
+        console.error('Error sending email', payload.email);
+      }
 
       try {
         await this.prisma.user.delete({ where: { id: user.id } });
       } catch (err) {
         console.error('Failed to cleanup user', payload.email, err);
       }
+
       throw new InternalServerErrorException();
     }
 
     return true;
   }
 
-  async registerFail(payload: RegisterFailDto) {
-    const { email } = payload;
-
-    // gets user data based on email
-    const user = await this.prisma.basicAuth.findUnique({
-      where: {
-        email,
-      },
-    });
-    if (!user) {
-      throw new NotFoundException('User not found.');
-    }
-
-    try {
-      // makes a url with the token and sends it to the given email
-      const resetPasswordUrl = `${this.config.getOrThrow(
-        'AUTH_HOST',
-      )}/forgot-password`;
-
-      await this.mailer.send(
-        email,
-        'HT6 Registration Failed: You Already Have an Account',
-        `You tried to register for an account with the same email, you already have an account. \nIf you forgot your password, please change it using ${resetPasswordUrl}`,
-      );
-
-      /* try {
-        await this.prisma.user.delete({ where: { id: user.userId } });
-      } catch (err) {
-        console.error('Failed to cleanup user', payload.email, err);
-      } */
-
-      return true;
-    } catch (error) {
-      console.error('Error sending email', payload.email);
-      throw new InternalServerErrorException();
-    }
-  }
-
   async resendVerify(payload: ResendVerifyDto) {
-    const { email } = payload;
-
     // gets user data based on email
-    const user = await this.prisma.basicAuth.findUnique({
-      where: {
-        email,
-      },
-    });
-    if (!user) {
-      throw new NotFoundException('User not found.');
-    }
+    const user = await this.getUserByEmail(payload.email);
 
     try {
       // get the registration verify token
-      const verifyToken = await this.jwt.signAsync(
-        { owo: 'uwu' },
-        {
-          audience: ['verify'],
-          subject: user.userId,
-          expiresIn: '1h',
-        },
-      );
+      const verifyToken = await this.getToken('verify', user.userId, '1h');
 
       // makes a url with the token and sends it to the given email
-      const verifyUrl = `${this.config.getOrThrow(
-        'AUTH_HOST',
-      )}/verify?token=${verifyToken}`;
-
-      await this.mailer.send(
-        email,
+      this.sendLinkEmail(
+        payload.email,
+        `verify?token=${verifyToken}`,
         'HT6 Verify email',
-        `To verify, go to ${verifyUrl}`,
+        `To verify, go to`,
       );
 
       return true;
@@ -218,43 +185,28 @@ export class AuthService {
   }
 
   async resetPassword(payload: ResetPasswordDto) {
-    const { email } = payload;
-
     // gets user data based on email
-    const user = await this.prisma.basicAuth.findUnique({
-      where: {
-        email,
-      },
-    });
-    if (!user) {
-      throw new NotFoundException('User not found.');
-    }
+    const user = await this.getUserByEmail(payload.email);
 
     try {
       // get a token for permission to reset password
-      const passwordToken = await this.jwt.signAsync(
-        { owo: 'uwu' },
-        {
-          audience: ['resetPassword'],
-          subject: user.userId,
-          expiresIn: '15m',
-        },
+      const passwordToken = await this.getToken(
+        'resetPassword',
+        user.userId,
+        '15m',
       );
 
       // makes a url with the token and sends it to the given email
-      const passwordUrl = `${this.config.getOrThrow(
-        'AUTH_HOST',
-      )}/reset-password?token=${passwordToken}`;
-
-      await this.mailer.send(
-        email,
+      this.sendLinkEmail(
+        payload.email,
+        `reset-password?token=${passwordToken}`,
         'HT6 Reset Password',
-        `A request has been made to reset your password.\nIf you made this request, please go to the provided link: ${passwordUrl}`,
+        `A request has been made to reset your password.\nIf you made this request, please go to the provided link:`,
       );
 
       return true;
     } catch (error) {
-      console.error('Error changing password', error);
+      console.error('Error sending email', error);
       throw new InternalServerErrorException();
     }
   }

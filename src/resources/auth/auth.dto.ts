@@ -31,12 +31,6 @@ export class RegisterUserDto extends createZodDto(
     ),
 ) {}
 
-export class RegisterFailDto extends createZodDto(
-  z.object({
-    email: z.string().email(),
-  }),
-) {}
-
 export class LoginUserDto extends createZodDto(
   BasicAuthCreateSchema.pick({ email: true, password: true }),
 ) {}
@@ -62,6 +56,20 @@ export class ResetPasswordDto extends createZodDto(
 export class VerifiedResetPasswordDto extends createZodDto(
   z.object({
     token: z.string(),
-    newPassword: z.string(),
+    newPassword: z
+      .string()
+      .refine(
+        R.pipe(
+          passwordStrength,
+          R.prop('value'),
+          R.toLower,
+          R.includes('weak'),
+          R.not,
+        ),
+        {
+          message: 'Password too weak',
+          path: ['newPassword'],
+        },
+      ),
   }),
 ) {}
